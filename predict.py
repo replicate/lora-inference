@@ -232,7 +232,7 @@ class Predictor(BasePredictor):
         self,
         prompt: str = Input(
             description="Input prompt. Use <1>, <2>, <3>, etc., to specify LoRA concepts",
-            default="a photo of an astronaut riding a horse on mars",
+            default="a photo of <1> riding a horse on mars",
         ),
         negative_prompt: str = Input(
             description="Specify things to not see in the output",
@@ -241,12 +241,12 @@ class Predictor(BasePredictor):
         width: int = Input(
             description="Width of output image. Maximum size is 1024x768 or 768x1024 because of memory limits",
             choices=[128, 256, 384, 448, 512, 576, 640, 704, 768, 832, 896, 960, 1024],
-            default=768,
+            default=512,
         ),
         height: int = Input(
             description="Height of output image. Maximum size is 1024x768 or 768x1024 because of memory limits",
             choices=[128, 256, 384, 448, 512, 576, 640, 704, 768, 832, 896, 960, 1024],
-            default=768,
+            default=512,
         ),
         num_outputs: int = Input(
             description="Number of images to output.",
