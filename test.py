@@ -1,28 +1,42 @@
 from predict import Predictor
 from inspect import signature
+import argparse
 
-p = Predictor()
-p.setup()
-sig = signature(Predictor.predict)
+if __name__ == "__main__":
 
-defaults = {}
-for param_name, param in sig.parameters.items():
-    if param.default != param.empty and param.default.default != Ellipsis:
-        defaults[param_name] = param.default.default
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--prompt", type=str, default="<1> style")
+    parser.add_argument("--sd_version", type=str, default="v1")
 
-print(defaults)
-del defaults["prompt"]
-del defaults["lora_urls"]
-del defaults["lora_scales"]
+    sd_version = parser.parse_args().sd_version
+    prompt = parser.parse_args().prompt
 
-out = p.predict(
-    lora_urls="https://replicate.delivery/pbxt/f3qw3sRceIuzGUR11igMilMJscSeS32NGQTgBeREwjmMQfQDC/tmpm1lnsk1xelon-musk.safetensors|https://replicate.delivery/pbxt/6CAOif8vSfkSBEQk3YB4qqcs3ZEkOay22pKLEVfe7e9FjehGE/tmp3901xx0nold-disney.safetensors",
-    # lora_urls="",
-    lora_scales="0.7|0.1",
-    prompt="a photo of <1> in style of <2> avatarart style",
-    **defaults
-)
+    EXAMPLE_LORAS = {
+        "v1": "https://replicate.delivery/pbxt/IzbeguwVsW3PcC1gbiLy5SeALwk4sGgWroHagcYIn9I960bQA/tmpjlodd7vazekezip.safetensors",
+        "v2": "",
+    }
 
-from PIL import Image
+    p = Predictor()
+    p.setup()
+    sig = signature(Predictor.predict)
 
-Image.open("/tmp/out-0.png").save("./out.png")
+    defaults = {}
+    for param_name, param in sig.parameters.items():
+        if param.default != param.empty and param.default.default != Ellipsis:
+            defaults[param_name] = param.default.default
+
+    print(defaults)
+    del defaults["prompt"]
+    del defaults["lora_urls"]
+    del defaults["lora_scales"]
+
+    out = p.predict(
+        lora_urls=EXAMPLE_LORAS[sd_version],
+        lora_scales="0.5",
+        prompt=prompt,
+        **defaults
+    )
+
+    from PIL import Image
+
+    Image.open("/tmp/out-0.png").save("./out.png")
