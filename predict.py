@@ -111,42 +111,6 @@ def download_lora(url):
     return fn
 
 
-def lora_add(merged_fn, path_1, alpha_1, path_2, alpha_2):
-    """Scales each lora by appropriate weights & returns"""
-    start_time = time.time()
-    safeloras_1 = safe_open(path_1, framework="pt", device="cpu")
-    safeloras_2 = safe_open(path_2, framework="pt", device="cpu")
-
-    metadata = dict(safeloras_1.metadata())
-    metadata.update(dict(safeloras_2.metadata()))
-
-    ret_tensor = {}
-
-    for keys in set(list(safeloras_1.keys()) + list(safeloras_2.keys())):
-        if keys.startswith("text_encoder") or keys.startswith("unet"):
-
-            tens1 = safeloras_1.get_tensor(keys)
-            tens2 = safeloras_2.get_tensor(keys)
-
-            tens = alpha_1 * tens1 + alpha_2 * tens2
-            ret_tensor[keys] = tens
-        else:
-            if keys in safeloras_1.keys():
-
-                tens1 = safeloras_1.get_tensor(keys)
-            else:
-                tens1 = safeloras_2.get_tensor(keys)
-
-            ret_tensor[keys] = tens1
-
-    print(f"merge time: {time.time() - start_time}")
-
-    # we don't need to go to-> from safetensors here, adding in now for compat's sake
-    start_time = time.time()
-    save_file(ret_tensor, merged_fn, metadata)
-    print(f"saving time: {time.time() - start_time}")
-
-
 class Predictor(BasePredictor):
     def setup(self):
         """Load the model into memory to make running multiple predictions efficient"""
@@ -166,26 +130,9 @@ class Predictor(BasePredictor):
             cache_dir=MODEL_CACHE,
             local_files_only=True,
         ).to("cuda")
-
+        self.token_size_list: list = []
+        self.ranklist: list = []
         self.loaded = None
-
-    def merge_loras(self, url_1, scale_1, url_2, scale_2):
-        merged_fn = url_local_fn(f"{url_1}-{url_2}-{scale_1}-{scale_2}")
-
-        if self.loaded == merged_fn:
-            print("The requested two LoRAs are already scaled and loaded.")
-            return
-
-        lora_1 = download_lora(url_1)
-        lora_2 = download_lora(url_2)
-
-        st = time.time()
-        lora_add(merged_fn, lora_1, scale_1, lora_2, scale_2)
-        print(f"merging time: {time.time() - st}")
-
-        patch_pipe(self.pipe, merged_fn)
-        # merging tunes lora scale so we don't need to do that here.
-        self.loaded = merged_fn
 
     def join_many_lora(self, urllists: List[str], scales: List[float]):
         assert len(urllists) == len(scales), "Number of LoRAs and scales must match."
@@ -311,13 +258,16 @@ class Predictor(BasePredictor):
 
         lora_urls = [u.strip() for u in lora_urls.split("|")]
         lora_scales = [float(s.strip()) for s in lora_scales.split("|")]
-        self.join_many_lora(lora_urls, lora_scales)
-        if prompt is not None:
-            for idx, tok_size in enumerate(self.token_size_list):
-                prompt = prompt.replace(
-                    f"<{idx + 1}>",
-                    "".join([f"<s{idx}-{jdx}>" for jdx in range(tok_size)]),
-                )
+        if len(lora_urls) > 0:
+            self.join_many_lora(lora_urls, lora_scales)
+            if prompt is not None:
+                for idx, tok_size in enumerate(self.token_size_list):
+                    prompt = prompt.replace(
+                        f"<{idx + 1}>",
+                        "".join([f"<s{idx}-{jdx}>" for jdx in range(tok_size)]),
+                    )
+        else:
+            print("No LoRA models provided, using default model...")
 
         output = self.pipe(
             prompt=[prompt] * num_outputs if prompt is not None else None,
