@@ -151,6 +151,7 @@ class Predictor(BasePredictor):
 
             tensors, metadata, ranklist, token_size_list = lora_join(lora_safetenors)
             save_file(tensors, merged_fn, metadata)
+            print("Saved at", merged_fn)
 
             print(f"merging time: {time.time() - st}")
 
@@ -164,26 +165,7 @@ class Predictor(BasePredictor):
             diags = diags + [scale] * rank
 
         set_lora_diag(self.pipe.unet, torch.tensor(diags))
-
-    def load_lora(self, url, scale):
-        if url == self.loaded:
-            print("The requested LoRA model is already loaded...")
-            return
-
-        start_time = time.time()
-        local_lora_safetensors = download_lora(url)
-        print("download_lora time:", time.time() - start_time)
-
-        start_time = time.time()
-        patch_pipe(self.pipe, local_lora_safetensors)
-        print("patch_pipe time:", time.time() - start_time)
-
-        start_time = time.time()
-        tune_lora_scale(self.pipe.unet, scale)
-        tune_lora_scale(self.pipe.text_encoder, scale)
-        print("tune_lora_scale time:", time.time() - start_time)
-
-        self.loaded = url
+        set_lora_diag(self.pipe.text_encoder, torch.tensor(diags))
 
     @torch.inference_mode()
     def predict(
@@ -194,7 +176,7 @@ class Predictor(BasePredictor):
         ),
         negative_prompt: str = Input(
             description="Specify things to not see in the output",
-            default=None,
+            default="",
         ),
         width: int = Input(
             description="Width of output image. Maximum size is 1024x768 or 768x1024 because of memory limits",
@@ -256,9 +238,9 @@ class Predictor(BasePredictor):
 
         generator = torch.Generator("cuda").manual_seed(seed)
 
-        lora_urls = [u.strip() for u in lora_urls.split("|")]
-        lora_scales = [float(s.strip()) for s in lora_scales.split("|")]
         if len(lora_urls) > 0:
+            lora_urls = [u.strip() for u in lora_urls.split("|")]
+            lora_scales = [float(s.strip()) for s in lora_scales.split("|")]
             self.join_many_lora(lora_urls, lora_scales)
             if prompt is not None:
                 for idx, tok_size in enumerate(self.token_size_list):
