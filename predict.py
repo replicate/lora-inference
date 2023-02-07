@@ -23,9 +23,14 @@ from lora_diffusion import patch_pipe, tune_lora_scale, set_lora_diag
 
 from safetensors.torch import safe_open, save_file
 
-MODEL_ID = "runwayml/stable-diffusion-v1-5"
+import dotenv
+import os
+
+dotenv.load_dotenv()
+
+MODEL_ID = os.environ.get("MODEL_ID", None)
 MODEL_CACHE = "diffusers-cache"
-SAFETY_MODEL_ID = "CompVis/stable-diffusion-safety-checker"
+SAFETY_MODEL_ID = os.environ.get("SAFETY_MODEL_ID", None)
 
 
 def lora_join(lora_safetenors: list):

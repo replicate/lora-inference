@@ -19,5 +19,6 @@ build:
     - "git+https://github.com/cloneofsimo/lora.git@848db919c7f3a299bf3d0780ac11cf7cfcb4093e"
     - "opencv-python==4.7.0.68"
     - "torchvision==0.14.0"
+    - "python-dotenv"
 
 predict: "predict.py:Predictor"
