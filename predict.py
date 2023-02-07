@@ -18,6 +18,8 @@ from diffusers import (
 from diffusers.pipelines.stable_diffusion.safety_checker import (
     StableDiffusionSafetyChecker,
 )
+from transformers import CLIPFeatureExtractor
+
 
 from lora_diffusion import patch_pipe, tune_lora_scale, set_lora_diag
 
@@ -154,9 +156,13 @@ class Predictor(BasePredictor):
             cache_dir=MODEL_CACHE,
             local_files_only=True,
         )
+        feature_extractor = CLIPFeatureExtractor.from_json_file(
+            f"{MODEL_CACHE}/feature_extractor/preprocessor_config.json"
+        )
         self.pipe = StableDiffusionPipeline.from_pretrained(
             MODEL_ID,
             safety_checker=safety_checker,
+            feature_extractor=feature_extractor,
             cache_dir=MODEL_CACHE,
             local_files_only=True,
         ).to("cuda")
@@ -279,6 +285,7 @@ class Predictor(BasePredictor):
         ),
         lora_urls: str = Input(
             description="List of urls for safetensors of lora models, seperated with | . If provided, it will override all above options.",
+            default="",
         ),
         lora_scales: str = Input(
             description="List of scales for safetensors of lora models, seperated with | ",
