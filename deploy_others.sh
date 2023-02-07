@@ -9,5 +9,5 @@ echo "SAFETY_MODEL_ID=$SAFETY_MODEL_ID" >> .env
 echo "IS_FP16=$IS_FP16" >> .env
 
 cog run script/download-weights.py
-cog run test.py
+cog run script/test.py
 cog push r8.im/$USERNAME/$REPLICATE_MODEL_ID

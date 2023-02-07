@@ -22,9 +22,9 @@ assert MODEL_ID is not None, "MODEL_ID must be set"
 assert SAFETY_MODEL_ID is not None, "SAFETY_MODEL_ID must be set"
 assert IS_FP16 is not None, "IS_FP16 must be set"
 
-# if os.path.exists(MODEL_CACHE):
-#     shutil.rmtree(MODEL_CACHE)
-# os.makedirs(MODEL_CACHE, exist_ok=True)
+if os.path.exists(MODEL_CACHE):
+    shutil.rmtree(MODEL_CACHE)
+os.makedirs(MODEL_CACHE, exist_ok=True)
 
 torch_dtype = torch.float16 if IS_FP16 == 1 else torch.float32
 
