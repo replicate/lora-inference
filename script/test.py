@@ -1,8 +1,11 @@
-from .predict import Predictor
+import sys
 
+sys.path.append(".")
+from predict import Predictor
 from inspect import signature
 
 p = Predictor()
+p.setup()
 sig = signature(Predictor.predict)
 
 defaults = {}
@@ -12,12 +15,12 @@ for param_name, param in sig.parameters.items():
 
 print(defaults)
 del defaults["prompt"]
-del defaults["list_of_lora_urls"]
-del defaults["list_of_lora_scales"]
+del defaults["lora_urls"]
+del defaults["lora_scales"]
 
 out = p.predict(
-    list_of_lora_urls="https://storage.googleapis.com/replicant-misc/lora/bfirsh-2.safetensors|https://storage.googleapis.com/replicant-misc/lora/lora_illust.safetensors",
-    list_of_lora_scales="0.7|0.1",
+    lora_urls="https://storage.googleapis.com/replicant-misc/lora/bfirsh-2.safetensors|https://storage.googleapis.com/replicant-misc/lora/lora_illust.safetensors",
+    lora_scales="0.7|0.1",
     prompt="a photo of <1> in style of <2>",
     **defaults
 )
