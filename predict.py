@@ -33,6 +33,7 @@ dotenv.load_dotenv()
 MODEL_ID = os.environ.get("MODEL_ID", None)
 MODEL_CACHE = "diffusers-cache"
 SAFETY_MODEL_ID = os.environ.get("SAFETY_MODEL_ID", None)
+IS_FP16 = os.environ.get("IS_FP16", "0") == "1"
 
 
 def lora_join(lora_safetenors: list):
@@ -119,6 +120,7 @@ class Predictor(BasePredictor):
             SAFETY_MODEL_ID,
             cache_dir=MODEL_CACHE,
             local_files_only=True,
+            torch_dtype=torch.float16 if IS_FP16 else torch.float32,
         )
         feature_extractor = CLIPFeatureExtractor.from_json_file(
             f"{MODEL_CACHE}/feature_extractor/preprocessor_config.json"
@@ -129,6 +131,7 @@ class Predictor(BasePredictor):
             feature_extractor=feature_extractor,
             cache_dir=MODEL_CACHE,
             local_files_only=True,
+            torch_dtype=torch.float16 if IS_FP16 else torch.float32,
         ).to("cuda")
         self.token_size_list: list = []
         self.ranklist: list = []

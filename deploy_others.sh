@@ -1,8 +1,8 @@
-export MODEL_ID="lambdalabs/dreambooth-avatar" # change this
+export MODEL_ID="lambdalabs/dreambooth-avatar" # change this to model at huggingface or your local repository.
 export SAFETY_MODEL_ID="CompVis/stable-diffusion-safety-checker"
 export IS_FP16=1
-export USERNAME="cloneofsimo" # change this
-export REPLICATE_MODEL_ID="avatar"
+export USERNAME="cloneofsimo" # change this to your replicate ID.
+export REPLICATE_MODEL_ID="avatar" #replciate model ID,
 
 echo "MODEL_ID=$MODEL_ID" > .env
 echo "SAFETY_MODEL_ID=$SAFETY_MODEL_ID" >> .env
