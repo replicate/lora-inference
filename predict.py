@@ -21,7 +21,7 @@ from diffusers.pipelines.stable_diffusion.safety_checker import (
 from transformers import CLIPFeatureExtractor
 
 
-from lora_diffusion import patch_pipe, tune_lora_scale, set_lora_diag
+from lora_diffusion import LoRAManager, monkeypatch_remove_lora
 
 from safetensors.torch import safe_open, save_file
 
@@ -34,58 +34,6 @@ MODEL_ID = os.environ.get("MODEL_ID", None)
 MODEL_CACHE = "diffusers-cache"
 SAFETY_MODEL_ID = os.environ.get("SAFETY_MODEL_ID", None)
 IS_FP16 = os.environ.get("IS_FP16", "0") == "1"
-
-
-def lora_join(lora_safetenors: list):
-    metadatas = [dict(safelora.metadata()) for safelora in lora_safetenors]
-    total_metadata = {}
-    total_tensor = {}
-    total_rank = 0
-    ranklist = []
-    for _metadata in metadatas:
-        rankset = []
-        for k, v in _metadata.items():
-            if k.endswith("rank"):
-                rankset.append(int(v))
-
-        assert len(set(rankset)) == 1, "Rank should be the same per model"
-        total_rank += rankset[0]
-        total_metadata.update(_metadata)
-        ranklist.append(rankset[0])
-
-    tensorkeys = set()
-    for safelora in lora_safetenors:
-        tensorkeys.update(safelora.keys())
-
-    for keys in tensorkeys:
-        if keys.startswith("text_encoder") or keys.startswith("unet"):
-            tensorset = [safelora.get_tensor(keys) for safelora in lora_safetenors]
-
-            is_down = keys.endswith("down")
-
-            if is_down:
-                _tensor = torch.cat(tensorset, dim=0)
-                assert _tensor.shape[0] == total_rank
-            else:
-                _tensor = torch.cat(tensorset, dim=1)
-                assert _tensor.shape[1] == total_rank
-
-            total_tensor[keys] = _tensor
-            keys_rank = ":".join(keys.split(":")[:-1]) + ":rank"
-            total_metadata[keys_rank] = str(total_rank)
-    token_size_list = []
-    for idx, safelora in enumerate(lora_safetenors):
-        tokens = [k for k, v in safelora.metadata().items() if v == "<embed>"]
-        for jdx, token in enumerate(sorted(tokens)):
-            if total_metadata.get(token, None) is not None:
-                del total_metadata[token]
-            total_tensor[f"<s{idx}-{jdx}>"] = safelora.get_tensor(token)
-            total_metadata[f"<s{idx}-{jdx}>"] = "<embed>"
-            print(f"Embedding {token} replaced to <s{idx}-{jdx}>")
-
-        token_size_list.append(len(tokens))
-
-    return total_tensor, total_metadata, ranklist, token_size_list
 
 
 def url_local_fn(url):
@@ -136,39 +84,26 @@ class Predictor(BasePredictor):
         self.token_size_list: list = []
         self.ranklist: list = []
         self.loaded = None
+        self.lora_manager = None
 
-    def join_many_lora(self, urllists: List[str], scales: List[float]):
+    def set_lora(self, urllists: List[str], scales: List[float]):
         assert len(urllists) == len(scales), "Number of LoRAs and scales must match."
 
         merged_fn = url_local_fn(f"{'-'.join(urllists)}")
 
         if self.loaded == merged_fn:
             print("The requested LoRAs are loaded.")
-
+            assert self.lora_manager is not None
         else:
-            lora_safetenors = [
-                safe_open(download_lora(url), framework="pt", device="cpu")
-                for url in urllists
-            ]
+
             st = time.time()
-
-            tensors, metadata, ranklist, token_size_list = lora_join(lora_safetenors)
-            save_file(tensors, merged_fn, metadata)
-            print("Saved at", merged_fn)
-
+            self.lora_manager = LoRAManager(
+                [download_lora(url) for url in urllists], self.pipe
+            )
+            self.loaded = merged_fn
             print(f"merging time: {time.time() - st}")
 
-            patch_pipe(self.pipe, merged_fn)
-            self.loaded = merged_fn
-            self.token_size_list = token_size_list
-            self.ranklist = ranklist
-
-        diags = []
-        for scale, rank in zip(scales, self.ranklist):
-            diags = diags + [scale] * rank
-
-        set_lora_diag(self.pipe.unet, torch.tensor(diags))
-        set_lora_diag(self.pipe.text_encoder, torch.tensor(diags))
+        self.lora_manager.tune(scales)
 
     @torch.inference_mode()
     def predict(
@@ -244,15 +179,13 @@ class Predictor(BasePredictor):
         if len(lora_urls) > 0:
             lora_urls = [u.strip() for u in lora_urls.split("|")]
             lora_scales = [float(s.strip()) for s in lora_scales.split("|")]
-            self.join_many_lora(lora_urls, lora_scales)
-            if prompt is not None:
-                for idx, tok_size in enumerate(self.token_size_list):
-                    prompt = prompt.replace(
-                        f"<{idx + 1}>",
-                        "".join([f"<s{idx}-{jdx}>" for jdx in range(tok_size)]),
-                    )
+            self.set_lora(lora_urls, lora_scales)
+            prompt = self.lora_manager.prompt(prompt)
         else:
             print("No LoRA models provided, using default model...")
+            monkeypatch_remove_lora(self.pipe.unet)
+            monkeypatch_remove_lora(self.pipe.text_encoder)
+            prompt = self.lora_manager.prompt(prompt)
 
         output = self.pipe(
             prompt=[prompt] * num_outputs if prompt is not None else None,
