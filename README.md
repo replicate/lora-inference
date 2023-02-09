@@ -17,7 +17,7 @@ You can deploy any models at huggingface or ones you trained yourself. You can a
 
 ### 1. Manual deployment
 
-run
+We have a default SD1.5 deployed at [replicate](https://github.com/replicate/lora-inference), so you can run your own in a scalable manner. If you would like to launch your own model, run
 
 ```
 cog run script/download-weights.py
@@ -34,7 +34,7 @@ cog predict -i prompt="monkey scuba diving"
 
 to run locally.
 
-### 2. Deploy with bash script
+### 2. Deploy & Push to replicate with bash script
 
 First, make a model at replicate.com. Create one [here](https://replicate.com/create)
 
