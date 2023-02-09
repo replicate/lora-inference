@@ -16,7 +16,7 @@ dotenv.load_dotenv()
 MODEL_ID = os.environ.get("MODEL_ID", None)
 MODEL_CACHE = "diffusers-cache"
 SAFETY_MODEL_ID = os.environ.get("SAFETY_MODEL_ID", None)
-IS_FP16 = os.environ.get("IS_FP16", None)
+IS_FP16 = 0
 
 assert MODEL_ID is not None, "MODEL_ID must be set"
 assert SAFETY_MODEL_ID is not None, "SAFETY_MODEL_ID must be set"
