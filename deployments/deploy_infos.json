@@ -28,5 +28,10 @@
     "model_id": "runwayml/stable-diffusion-v1-5",
     "name": "lora",
     "near_version": "v1"
+  },
+  {
+    "model_id": "22h/vintedois-diffusion-v0-1",
+    "name": "vintedois_lora",
+    "near_version": "v1"
   }
 ]
