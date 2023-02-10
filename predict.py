@@ -151,12 +151,12 @@ class Predictor(BasePredictor):
             description="Choose a scheduler.",
         ),
         lora_urls: str = Input(
-            description="List of urls for safetensors of lora models, seperated with | . If provided, it will override all above options.",
+            description="List of urls for safetensors of lora models, seperated with | .",
             default="",
         ),
         lora_scales: str = Input(
             description="List of scales for safetensors of lora models, seperated with | ",
-            default="0.3",
+            default="0.5",
         ),
         seed: int = Input(
             description="Random seed. Leave blank to randomize the seed", default=None
