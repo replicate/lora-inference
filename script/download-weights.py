@@ -16,7 +16,7 @@ dotenv.load_dotenv()
 MODEL_ID = os.environ.get("MODEL_ID", None)
 MODEL_CACHE = "diffusers-cache"
 SAFETY_MODEL_ID = os.environ.get("SAFETY_MODEL_ID", None)
-IS_FP16 = 0
+IS_FP16 = 1
 
 assert MODEL_ID is not None, "MODEL_ID must be set"
 assert SAFETY_MODEL_ID is not None, "SAFETY_MODEL_ID must be set"
@@ -28,8 +28,8 @@ os.makedirs(MODEL_CACHE, exist_ok=True)
 
 torch_dtype = torch.float16 if IS_FP16 == 1 else torch.float32
 
-saftey_checker = StableDiffusionSafetyChecker.from_pretrained(
-    SAFETY_MODEL_ID, cache_dir=MODEL_CACHE, torch_dtype=torch_dtype
+safety_checker = StableDiffusionSafetyChecker.from_pretrained(
+    SAFETY_MODEL_ID, torch_dtype=torch_dtype
 )
 
 feature_extractor = CLIPFeatureExtractor.from_dict(
@@ -50,10 +50,11 @@ feature_extractor = CLIPFeatureExtractor.from_dict(
     }
 )
 
-feature_extractor.save_pretrained(f"{MODEL_CACHE}/feature_extractor")
-
 pipe = StableDiffusionPipeline.from_pretrained(
     MODEL_ID,
-    cache_dir=MODEL_CACHE,
+    safety_checker=safety_checker,
+    feature_extractor=feature_extractor,
     torch_dtype=torch_dtype,
 )
+
+pipe.save_pretrained(MODEL_CACHE)

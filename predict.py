@@ -64,21 +64,17 @@ class Predictor(BasePredictor):
     def setup(self):
         """Load the model into memory to make running multiple predictions efficient"""
         print("Loading pipeline...")
-        safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-            SAFETY_MODEL_ID,
-            cache_dir=MODEL_CACHE,
-            local_files_only=True,
-            torch_dtype=torch.float16 if IS_FP16 else torch.float32,
-        )
-        feature_extractor = CLIPFeatureExtractor.from_json_file(
-            f"{MODEL_CACHE}/feature_extractor/preprocessor_config.json"
-        )
+        # safety_checker = StableDiffusionSafetyChecker.from_pretrained(
+        #     SAFETY_MODEL_ID,
+        #     cache_dir=MODEL_CACHE,
+        #     local_files_only=True,
+        #     torch_dtype=torch.float16 if IS_FP16 else torch.float32,
+        # )
+        # feature_extractor = CLIPFeatureExtractor.from_json_file(
+        #     f"{MODEL_CACHE}/feature_extractor/preprocessor_config.json"
+        # )
         self.pipe = StableDiffusionPipeline.from_pretrained(
-            MODEL_ID,
-            safety_checker=safety_checker,
-            feature_extractor=feature_extractor,
-            cache_dir=MODEL_CACHE,
-            local_files_only=True,
+            MODEL_CACHE,
             torch_dtype=torch.float16 if IS_FP16 else torch.float32,
         ).to("cuda")
         self.token_size_list: list = []
