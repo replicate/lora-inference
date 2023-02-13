@@ -64,15 +64,7 @@ class Predictor(BasePredictor):
     def setup(self):
         """Load the model into memory to make running multiple predictions efficient"""
         print("Loading pipeline...")
-        # safety_checker = StableDiffusionSafetyChecker.from_pretrained(
-        #     SAFETY_MODEL_ID,
-        #     cache_dir=MODEL_CACHE,
-        #     local_files_only=True,
-        #     torch_dtype=torch.float16 if IS_FP16 else torch.float32,
-        # )
-        # feature_extractor = CLIPFeatureExtractor.from_json_file(
-        #     f"{MODEL_CACHE}/feature_extractor/preprocessor_config.json"
-        # )
+
         self.pipe = StableDiffusionPipeline.from_pretrained(
             MODEL_CACHE,
             torch_dtype=torch.float16 if IS_FP16 else torch.float32,
@@ -181,7 +173,6 @@ class Predictor(BasePredictor):
             print("No LoRA models provided, using default model...")
             monkeypatch_remove_lora(self.pipe.unet)
             monkeypatch_remove_lora(self.pipe.text_encoder)
-            prompt = self.lora_manager.prompt(prompt)
 
         output = self.pipe(
             prompt=[prompt] * num_outputs if prompt is not None else None,
