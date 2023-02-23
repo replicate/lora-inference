@@ -2,3 +2,4 @@ diffusers-cache
 __pycache__
 .cog
 *.safetensors
+.env

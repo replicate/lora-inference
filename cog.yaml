@@ -16,8 +16,9 @@ build:
     - "scipy==1.9.3"
     - "transformers==4.25.1"
     - "accelerate==0.15.0"
-    - "git+https://github.com/cloneofsimo/lora.git@848db919c7f3a299bf3d0780ac11cf7cfcb4093e"
+    - "git+https://github.com/cloneofsimo/lora.git@85fa6e79092a007da8a5f4dbe033836e2a9db4cc"
     - "opencv-python==4.7.0.68"
     - "torchvision==0.14.0"
+    - "python-dotenv"
 
 predict: "predict.py:Predictor"
