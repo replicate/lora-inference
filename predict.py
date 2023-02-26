@@ -16,15 +16,10 @@ from diffusers import (
     EulerAncestralDiscreteScheduler,
     DPMSolverMultistepScheduler,
 )
-from diffusers.pipelines.stable_diffusion.safety_checker import (
-    StableDiffusionSafetyChecker,
-)
-from transformers import CLIPFeatureExtractor
 
 
 from lora_diffusion import LoRAManager, monkeypatch_remove_lora
 from PIL import Image
-from safetensors.torch import safe_open, save_file
 
 import dotenv
 import os
@@ -192,7 +187,8 @@ class Predictor(BasePredictor):
             monkeypatch_remove_lora(self.pipe.unet)
             monkeypatch_remove_lora(self.pipe.text_encoder)
 
-        if image is not None:
+        # either text2img or img2img
+        if image is None:
             self.pipe.scheduler = make_scheduler(scheduler, self.pipe.scheduler.config)
 
             output = self.pipe(
@@ -214,15 +210,11 @@ class Predictor(BasePredictor):
             self.img2img_pipe.scheduler = make_scheduler(
                 scheduler, self.pipe.scheduler.config
             )
-
-            generator = torch.Generator("cuda").manual_seed(seed)
             output = self.img2img_pipe(
                 prompt=[prompt] * num_outputs if prompt is not None else None,
                 negative_prompt=[negative_prompt] * num_outputs
                 if negative_prompt is not None
                 else None,
-                width=width,
-                height=height,
                 guidance_scale=guidance_scale,
                 generator=generator,
                 num_inference_steps=num_inference_steps,
