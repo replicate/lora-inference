@@ -1,7 +1,7 @@
 [
   {
-    "model_id": "SG161222/Realistic_Vision_V1.3",
-    "name": "realistic_vision_v1.3_lora",
+    "model_id": "wavymulder/portraitplus",
+    "name": "portraitplus_lora",
     "near_version": "v1"
   },
   {
@@ -12,11 +12,6 @@
   {
     "model_id": "ItsJayQz/GTA5_Artwork_Diffusion",
     "name": "gta5_lora",
-    "near_version": "v1"
-  },
-  {
-    "model_id": "BestJammer/HASDX",
-    "name": "hasdx_lora",
     "near_version": "v1"
   },
   {
@@ -32,6 +27,11 @@
   {
     "model_id": "22h/vintedois-diffusion-v0-1",
     "name": "vintedois_lora",
+    "near_version": "v1"
+  },
+  {
+    "model_id": "SG161222/Realistic_Vision_V1.3",
+    "name": "realistic_vision_v1.3_lora",
     "near_version": "v1"
   }
 ]

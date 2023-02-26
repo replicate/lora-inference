@@ -207,6 +207,12 @@ class Predictor(BasePredictor):
                 "image": Image.open(image).convert("RGB"),
                 "strength": prompt_strength,
             }
+            # check h, w limit
+            if extra_kwargs["image"].size[0] * extra_kwargs["image"].size[1] > 786432:
+                raise ValueError(
+                    "Maximum size is 1024x768 or 768x1024 pixels, because of memory limits. Please provide other Image"
+                )
+                
             self.img2img_pipe.scheduler = make_scheduler(
                 scheduler, self.pipe.scheduler.config
             )
