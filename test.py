@@ -112,7 +112,7 @@ if __name__ == "__main__":
             guidance_scale=3.0,
             seed=0,
             image="./out-0.png",
-            prompt_strength=0.5,
+            prompt_strength=0.7,
             **defaults,
         )
         
