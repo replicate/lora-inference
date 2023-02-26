@@ -14,9 +14,15 @@ if __name__ == "__main__":
         default="photo of <1> on the moon village in style of <2>, fantasy house, detailed faces, highres, RAW photo 8k uhd, dslr",
     )
     parser.add_argument("--sd_version", type=str, default="v1")
-
-    sd_version = parser.parse_args().sd_version
-    prompt = parser.parse_args().prompt
+    parser.add_argument("--test_text2img", action="store_true")
+    parser.add_argument("--test_img2img", action="store_true")
+    
+    arg = parser.parse_args()
+    
+    sd_version = arg.sd_version
+    prompt = arg.prompt
+    test_text2img = arg.test_text2img
+    test_img2img = arg.test_img2img
 
     EXAMPLE_LORAS = {
         "v1": "https://replicate.delivery/pbxt/IzbeguwVsW3PcC1gbiLy5SeALwk4sGgWroHagcYIn9I960bQA/tmpjlodd7vazekezip.safetensors|https://raw.githubusercontent.com/cloneofsimo/lora/master/example_loras/lora_popart.safetensors",
@@ -44,50 +50,71 @@ if __name__ == "__main__":
     del defaults["guidance_scale"]
     del defaults["seed"]
 
-    out = p.predict(
-        lora_urls=EXAMPLE_LORAS[sd_version],
-        lora_scales="0.5|0.9",
-        prompt=prompt,
-        guidance_scale=3.0,
-        seed=0,
-        **defaults,
-    )
+    if test_text2img:
+        # Test text2img
+        out = p.predict(
+            lora_urls=EXAMPLE_LORAS[sd_version],
+            lora_scales="0.5|0.9",
+            prompt=prompt,
+            guidance_scale=3.0,
+            seed=0,
+            **defaults,
+        )
 
-    Image.open("/tmp/out-0.png").save("./out-0.png")
+        Image.open("/tmp/out-0.png").save("./out-0.png")
 
-    # Also test null lora
-    out = p.predict(
-        lora_urls="",
-        lora_scales="",
-        prompt=prompt,
-        guidance_scale=3.0,
-        seed=0,
-        **defaults,
-    )
+        # Also test null lora
+        out = p.predict(
+            lora_urls="",
+            lora_scales="",
+            prompt=prompt,
+            guidance_scale=3.0,
+            seed=0,
+            **defaults,
+        )
 
-    Image.open("/tmp/out-0.png").save("./out-1.png")
+        Image.open("/tmp/out-0.png").save("./out-1.png")
 
-    # Also test reloading lora, with null scale
-    out = p.predict(
-        lora_urls=EXAMPLE_LORAS[sd_version],
-        lora_scales="0.0|0.0",
-        prompt=prompt,
-        guidance_scale=3.0,
-        seed=0,
-        **defaults,
-    )
+        # Also test reloading lora, with null scale
+        out = p.predict(
+            lora_urls=EXAMPLE_LORAS[sd_version],
+            lora_scales="0.0|0.0",
+            prompt=prompt,
+            guidance_scale=3.0,
+            seed=0,
+            **defaults,
+        )
 
-    Image.open("/tmp/out-0.png").save("./out-2.png")
+        Image.open("/tmp/out-0.png").save("./out-2.png")
 
-    # 2 and 3 should be the same.
+        # 2 and 3 should be the same.
 
-    out = p.predict(
-        lora_urls=EXAMPLE_LORAS_2[sd_version],
-        lora_scales="0.5|0.7",
-        prompt=prompt,
-        guidance_scale=3.0,
-        seed=0,
-        **defaults,
-    )
+        out = p.predict(
+            lora_urls=EXAMPLE_LORAS_2[sd_version],
+            lora_scales="0.5|0.7",
+            prompt=prompt,
+            guidance_scale=3.0,
+            seed=0,
+            **defaults,
+        )
 
-    Image.open("/tmp/out-0.png").save("./out-3.png")
+        Image.open("/tmp/out-0.png").save("./out-3.png")
+
+        # Test img2img
+    if test_img2img:
+        del defaults["image"]
+        del defaults["prompt_strength"]
+        
+        out = p.predict(
+            lora_urls=EXAMPLE_LORAS_2[sd_version],
+            lora_scales="0.5|0.7",
+            prompt=prompt,
+            guidance_scale=3.0,
+            seed=0,
+            image="./out-0.png",
+            prompt_strength=0.5,
+            **defaults,
+        )
+        
+        Image.open("/tmp/out-0.png").save("./out-img2img.png")
+        
