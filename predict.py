@@ -8,6 +8,7 @@ import torch
 from cog import BasePredictor, Input, Path
 from diffusers import (
     StableDiffusionPipeline,
+    StableDiffusionImg2ImgPipeline,
     PNDMScheduler,
     LMSDiscreteScheduler,
     DDIMScheduler,
@@ -22,7 +23,7 @@ from transformers import CLIPFeatureExtractor
 
 
 from lora_diffusion import LoRAManager, monkeypatch_remove_lora
-
+from PIL import Image
 from safetensors.torch import safe_open, save_file
 
 import dotenv
@@ -69,6 +70,17 @@ class Predictor(BasePredictor):
             MODEL_CACHE,
             torch_dtype=torch.float16 if IS_FP16 else torch.float32,
         ).to("cuda")
+
+        self.img2img_pipe = StableDiffusionImg2ImgPipeline(
+            vae=self.pipe.vae,
+            text_encoder=self.pipe.text_encoder,
+            tokenizer=self.pipe.tokenizer,
+            unet=self.pipe.unet,
+            scheduler=self.pipe.scheduler,
+            safety_checker=self.pipe.safety_checker,
+            feature_extractor=self.pipe.feature_extractor,
+        ).to("cuda")
+
         self.token_size_list: list = []
         self.ranklist: list = []
         self.loaded = None
@@ -126,6 +138,14 @@ class Predictor(BasePredictor):
         guidance_scale: float = Input(
             description="Scale for classifier-free guidance", ge=1, le=20, default=7.5
         ),
+        image: Path = Input(
+            description="(Img2Img) Inital image to generate variations of. If this is not none, Img2Img will be invoked.",
+            default=None,
+        ),
+        prompt_strength: float = Input(
+            description="(Img2Img) Prompt strength when providing the image. 1.0 corresponds to full destruction of information in init image",
+            default=0.8,
+        ),
         scheduler: str = Input(
             default="DPMSolverMultistep",
             choices=[
@@ -160,8 +180,6 @@ class Predictor(BasePredictor):
                 "Maximum size is 1024x768 or 768x1024 pixels, because of memory limits. Please select a lower width or height."
             )
 
-        self.pipe.scheduler = make_scheduler(scheduler, self.pipe.scheduler.config)
-
         generator = torch.Generator("cuda").manual_seed(seed)
 
         if len(lora_urls) > 0:
@@ -174,17 +192,42 @@ class Predictor(BasePredictor):
             monkeypatch_remove_lora(self.pipe.unet)
             monkeypatch_remove_lora(self.pipe.text_encoder)
 
-        output = self.pipe(
-            prompt=[prompt] * num_outputs if prompt is not None else None,
-            negative_prompt=[negative_prompt] * num_outputs
-            if negative_prompt is not None
-            else None,
-            width=width,
-            height=height,
-            guidance_scale=guidance_scale,
-            generator=generator,
-            num_inference_steps=num_inference_steps,
-        )
+        if image is not None:
+            self.pipe.scheduler = make_scheduler(scheduler, self.pipe.scheduler.config)
+
+            output = self.pipe(
+                prompt=[prompt] * num_outputs if prompt is not None else None,
+                negative_prompt=[negative_prompt] * num_outputs
+                if negative_prompt is not None
+                else None,
+                width=width,
+                height=height,
+                guidance_scale=guidance_scale,
+                generator=generator,
+                num_inference_steps=num_inference_steps,
+            )
+        else:
+            extra_kwargs = {
+                "image": Image.open(image).convert("RGB"),
+                "strength": prompt_strength,
+            }
+            self.img2img_pipe.scheduler = make_scheduler(
+                scheduler, self.pipe.scheduler.config
+            )
+
+            generator = torch.Generator("cuda").manual_seed(seed)
+            output = self.img2img_pipe(
+                prompt=[prompt] * num_outputs if prompt is not None else None,
+                negative_prompt=[negative_prompt] * num_outputs
+                if negative_prompt is not None
+                else None,
+                width=width,
+                height=height,
+                guidance_scale=guidance_scale,
+                generator=generator,
+                num_inference_steps=num_inference_steps,
+                **extra_kwargs,
+            )
 
         output_paths = []
         for i, sample in enumerate(output.images):
