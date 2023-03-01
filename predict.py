@@ -178,12 +178,12 @@ class Predictor(BasePredictor):
         seed: int = Input(
             description="Random seed. Leave blank to randomize the seed", default=None
         ),
-        adapter_condtion_image: Path = Input(
-            description="(T2I-adapter) Adapter Condition Image to gain extra control over generation. If this is not none, T2I adapter will be invoked. Width, Height of this value must match the above parameter, or Img2Img image.",
+        adapter_condition_image: Path = Input(
+            description="(T2I-adapter) Adapter Condition Image to gain extra control over generation. If this is not none, T2I adapter will be invoked. Width, Height of this image must match the above parameter, or dimension of the Img2Img image.",
             default=None,
         ),
         adapter_type: str = Input(
-            description="(T2I-adapter) Choose an adapter type for the additional condition .",
+            description="(T2I-adapter) Choose an adapter type for the additional condition.",
             choices=["sketch", "seg", "keypose", "depth"],
             default="sketch",
         ),
@@ -192,6 +192,12 @@ class Predictor(BasePredictor):
         if seed is None:
             seed = int.from_bytes(os.urandom(2), "big")
         print(f"Using seed: {seed}")
+
+        if image is not None:
+            pil_image = Image.open(image).convert("RGB")
+            width, height = pil_image.size
+
+        print(f"Generating image of {width} x {height} with prompt: {prompt}")
 
         if width * height > 786432:
             raise ValueError(
@@ -211,8 +217,17 @@ class Predictor(BasePredictor):
             monkeypatch_remove_lora(self.pipe.text_encoder)
 
         # handle t2i adapter
-        if adapter_condtion_image is not None:
-            cond_img = Image.open(adapter_condtion_image)
+        w_c, h_c = None, None
+
+        if adapter_condition_image is not None:
+
+            cond_img = Image.open(adapter_condition_image)
+            w_c, h_c = cond_img.size
+
+            if w_c != width or h_c != height:
+                raise ValueError(
+                    "Width and height of the adapter condition image must match the width and height of the generated image."
+                )
 
             if adapter_type == "sketch":
                 cond_img = cond_img.convert("L")
@@ -256,18 +271,14 @@ class Predictor(BasePredictor):
             )
         else:
             extra_kwargs = {
-                "image": Image.open(image).convert("RGB"),
+                "image": pil_image,
                 "strength": prompt_strength,
             }
-            # check h, w limit
-            if extra_kwargs["image"].size[0] * extra_kwargs["image"].size[1] > 786432:
-                raise ValueError(
-                    "Maximum size is 1024x768 or 768x1024 pixels, because of memory limits. Please provide other Image"
-                )
 
             self.img2img_pipe.scheduler = make_scheduler(
                 scheduler, self.pipe.scheduler.config
             )
+
             output = self.img2img_pipe(
                 prompt=[prompt] * num_outputs if prompt is not None else None,
                 negative_prompt=[negative_prompt] * num_outputs

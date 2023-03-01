@@ -53,7 +53,7 @@ if __name__ == "__main__":
     del defaults["seed"]
     
     if test_adapter:
-        defaults["adapter_condtion_image"] = "./test_data/keypose_0.png"
+        defaults["adapter_condition_image"] = "./test_data/keypose_0.png"
         defaults["adapter_type"] = "keypose"
 
     if test_text2img:
