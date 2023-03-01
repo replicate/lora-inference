@@ -31,7 +31,7 @@
   },
   {
     "model_id": "SG161222/Realistic_Vision_V1.3",
-    "name": "realistic_vision_v1.3_lora",
+    "name": "realistic_vision_v1.3",
     "near_version": "v1"
   }
 ]

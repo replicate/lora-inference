@@ -16,9 +16,11 @@ from diffusers import (
     EulerAncestralDiscreteScheduler,
     DPMSolverMultistepScheduler,
 )
-
+import numpy as np
 
 from lora_diffusion import LoRAManager, monkeypatch_remove_lora
+from t2i_adapters import Adapter
+from t2i_adapters import patch_pipe as patch_pipe_t2i_adapter
 from PIL import Image
 
 import dotenv
@@ -65,6 +67,18 @@ class Predictor(BasePredictor):
             MODEL_CACHE,
             torch_dtype=torch.float16 if IS_FP16 else torch.float32,
         ).to("cuda")
+
+        patch_pipe_t2i_adapter(self.pipe)
+
+        self.adapters = {
+            ext_type: Adapter.from_pretrained(ext_type).to("cuda")
+            for ext_type, _ in [
+                ("depth", "antique house"),
+                ("seg", "motorcycle"),
+                ("keypose", "elon musk"),
+                ("sketch", "robot owl"),
+            ]
+        }
 
         self.img2img_pipe = StableDiffusionImg2ImgPipeline(
             vae=self.pipe.vae,
@@ -164,6 +178,14 @@ class Predictor(BasePredictor):
         seed: int = Input(
             description="Random seed. Leave blank to randomize the seed", default=None
         ),
+        adapter_condtion_image: Path = Input(
+            description="(T2I-adapter) Adapter Condition Image to gain extra control over generation. If this is not none, T2I adapter will be invoked.",
+            default=None,
+        ),
+        adapter_type: str = Input(
+            description="(T2I-adapter) Choose an adapter type for the additional condition .",
+            default="sketch",
+        ),
     ) -> List[Path]:
         """Run a single prediction on the model"""
         if seed is None:
@@ -186,6 +208,35 @@ class Predictor(BasePredictor):
             print("No LoRA models provided, using default model...")
             monkeypatch_remove_lora(self.pipe.unet)
             monkeypatch_remove_lora(self.pipe.text_encoder)
+
+        # handle t2i adapter
+        if adapter_condtion_image is not None:
+            cond_img = Image.open(adapter_condtion_image)
+
+            if adapter_type == "sketch":
+                cond_img = cond_img.convert("L")
+                cond_img = np.array(cond_img) / 255.0
+                cond_img = (
+                    torch.from_numpy(cond_img).unsqueeze(0).unsqueeze(0).to("cuda")
+                )
+                cond_img = (cond_img > 0.5).float()
+
+            else:
+                cond_img = cond_img.convert("RGB")
+                cond_img = np.array(cond_img) / 255.0
+
+                cond_img = (
+                    torch.from_numpy(cond_img)
+                    .permute(2, 0, 1)
+                    .unsqueeze(0)
+                    .to("cuda")
+                    .float()
+                )
+
+            with torch.no_grad():
+                adapter_features = self.adapters[adapter_type](cond_img)
+
+            self.pipe.unet.set_adapter_features(adapter_features)
 
         # either text2img or img2img
         if image is None:
@@ -212,7 +263,7 @@ class Predictor(BasePredictor):
                 raise ValueError(
                     "Maximum size is 1024x768 or 768x1024 pixels, because of memory limits. Please provide other Image"
                 )
-                
+
             self.img2img_pipe.scheduler = make_scheduler(
                 scheduler, self.pipe.scheduler.config
             )

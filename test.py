@@ -16,6 +16,7 @@ if __name__ == "__main__":
     parser.add_argument("--sd_version", type=str, default="v1")
     parser.add_argument("--test_text2img", action="store_true")
     parser.add_argument("--test_img2img", action="store_true")
+    parser.add_argument("--test_adapter", action="store_true")
     
     arg = parser.parse_args()
     
@@ -23,6 +24,7 @@ if __name__ == "__main__":
     prompt = arg.prompt
     test_text2img = arg.test_text2img
     test_img2img = arg.test_img2img
+    test_adapter = arg.test_adapter
 
     EXAMPLE_LORAS = {
         "v1": "https://replicate.delivery/pbxt/IzbeguwVsW3PcC1gbiLy5SeALwk4sGgWroHagcYIn9I960bQA/tmpjlodd7vazekezip.safetensors|https://raw.githubusercontent.com/cloneofsimo/lora/master/example_loras/lora_popart.safetensors",
@@ -49,6 +51,10 @@ if __name__ == "__main__":
     del defaults["lora_scales"]
     del defaults["guidance_scale"]
     del defaults["seed"]
+    
+    if test_adapter:
+        defaults["adapter_condtion_image"] = "./test_data/keypose_0.png"
+        defaults["adapter_type"] = "keypose"
 
     if test_text2img:
         # Test text2img
