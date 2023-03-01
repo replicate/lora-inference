@@ -179,11 +179,12 @@ class Predictor(BasePredictor):
             description="Random seed. Leave blank to randomize the seed", default=None
         ),
         adapter_condtion_image: Path = Input(
-            description="(T2I-adapter) Adapter Condition Image to gain extra control over generation. If this is not none, T2I adapter will be invoked.",
+            description="(T2I-adapter) Adapter Condition Image to gain extra control over generation. If this is not none, T2I adapter will be invoked. Width, Height of this value must match the above parameter, or Img2Img image.",
             default=None,
         ),
         adapter_type: str = Input(
             description="(T2I-adapter) Choose an adapter type for the additional condition .",
+            choices=["sketch", "seg", "keypose", "depth"],
             default="sketch",
         ),
     ) -> List[Path]:
