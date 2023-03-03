@@ -3,4 +3,4 @@ __pycache__
 .cog
 *.safetensors
 .env
-*.png
+out*.png
