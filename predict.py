@@ -253,6 +253,8 @@ class Predictor(BasePredictor):
                 adapter_features = self.adapters[adapter_type](cond_img)
 
             self.pipe.unet.set_adapter_features(adapter_features)
+        else:
+            self.pipe.unet.set_adapter_features(None)
 
         # either text2img or img2img
         if image is None:
